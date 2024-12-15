@@ -1,0 +1,52 @@
+Guardrails for AI Agents - Feature Summary
+
+1. **Validation Engine**
+   - Provides hooks for pre-action and pre-output validations.
+   - Manages and executes multiple validators at different validation points.
+
+2. **Policy Management**
+   - Utilizes YAML-based policy definitions for defining validation rules.
+   - Parses policy files and translates them into actionable validator configurations.
+
+3. **Content Filtering**
+   - Filters agent outputs for forbidden words and enforces maximum length constraints.
+   - Blocks responses that contain sensitive, secret, or inappropriate content.
+
+4. **Action Whitelisting**
+   - Restricts agents to execute only approved actions, such as "wikipedia" and "calculate".
+   - Prevents unauthorized or potentially harmful actions from being executed.
+
+5. **Semantic Drift Detection**
+   - Ensures agent outputs remain aligned with the original goals.
+   - Uses embedding models to compute similarity between current outputs and initial prompts, blocking outputs that deviate beyond a set threshold.
+
+6. **Real-time Monitoring & Alerts**
+   - Continuously monitors agent behavior and validation events.
+   - Defines alert conditions like high failure rates or repeated action interventions.
+   - Triggers alerts with customizable handlers when conditions are met.
+
+7. **Logging & Analytics**
+   - Logs all validation events, interventions, and agent actions to log files.
+   - Provides analytics on validation statistics and intervention summaries, helping to assess agent performance and compliance.
+
+8. **Custom Validators**
+   - Supports creation of custom validators by inheriting from the BaseValidator class.
+   - Enables developers to implement domain-specific or specialized validation logic.
+
+9. **Alert Handling**
+   - Configurable alert handlers respond to triggered conditions.
+   - Supports both soft interventions (e.g., guiding back to policies) and hard interventions (e.g., blocking actions).
+
+10. **Integration with ReAct Agents**
+    - Seamlessly integrates with ReAct-based AI agents, adding safety and validation layers to their reasoning and action loops.
+    - Ensures that AI agents operate within defined safety parameters throughout their lifecycle.
+
+11. **Flexible Monitoring Configuration**
+    - Allows adding multiple monitoring conditions with specific thresholds and cooldown periods.
+    - Utilizes threaded monitoring to continuously check conditions without interrupting agent operations.
+
+12. **Comprehensive Project Structure**
+    - Organized into clear modules for core engine, validators, policy parsing, integrations, logging, monitoring, and analytics.
+    - Facilitates easy maintenance, scalability, and extension of functionalities.
+
+This feature set ensures that AI agents are robustly validated, monitored, and guided to operate safely and effectively within their operational boundaries. 
