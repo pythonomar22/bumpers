@@ -1,0 +1,22 @@
+validators:
+  - name: "allowed_actions"
+    type: "ActionWhitelist"
+    parameters:
+      allowed_actions: ["wikipedia", "calculate"]
+    applies_to: "PRE_ACTION"
+    on_fail: "block_action"
+    
+  - name: "content_filter"
+    type: "ContentFilter"
+    parameters:
+      forbidden_words: [
+        "confidential", 
+        "secret", 
+        "private",
+        "password",
+        "credentials",
+        "token"
+      ]
+      max_length: 1000
+    applies_to: "PRE_OUTPUT"
+    on_fail: "block_response" 
