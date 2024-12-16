@@ -7,80 +7,99 @@ import Editor from "@monaco-editor/react"
 
 export function HeroSection() {
   const frameworks = [
+    { id: "react", name: "ReAct", icon: "🤖", default: true },
+    { id: "langchain", name: "LangChain", icon: "⛓️" },
     { id: "openai", name: "OpenAI", icon: "🧠" },
-    { id: "langchain", name: "LangChain", icon: "⛓️", default: true },
-    { id: "crewai", name: "CrewAI", icon: "👥" },
-    { id: "controlflow", name: "Controlflow", icon: "🔄" },
-    { id: "fastapi", name: "FastAPI", icon: "⚡" },
-    { id: "flask", name: "Flask", icon: "🌶️" }
   ]
 
-  const handleCopy = (code) => {
-    navigator.clipboard.writeText(code)
-  }
-
   const codeExamples = {
-    langchain: `from langchain.agents import AgentType, initialize_agent
-from langchain.tools import tool
+    react: `from guardrails.integrations.react import GuardedReActAgent
+from guardrails.core.engine import CoreValidationEngine
+from guardrails.validators.action import ActionWhitelistValidator
+
+# Initialize validation engine
+engine = CoreValidationEngine()
+
+# Register action whitelist validator
+validator = ActionWhitelistValidator(allowed_actions=["search", "calculate"])
+engine.register_validator(validator, "pre_action")
+
+# Define available actions
+actions = {
+    "search": wikipedia_search,
+    "calculate": safe_calculator
+}
+
+# Create guarded ReAct agent
+agent = GuardedReActAgent(
+    validation_engine=engine,
+    prompt="You are a helpful AI assistant that can search and calculate."
+)
+
+# Run agent with safety guardrails
+result = agent.query("What is 20 * 15?", actions) `,
+    langchain: `from langchain.agents import initialize_agent, AgentType
 from langchain_openai import ChatOpenAI
+from guardrails.core.engine import CoreValidationEngine, ValidationPoint
+from guardrails.validators.action import ActionWhitelistValidator
+from guardrails.validators.content import ContentFilterValidator
+from guardrails.logging import FileLogger
 
-from guardrails.core.approval import ApprovalMethod, Guardrails
+# Initialize validation engine with logging
+logger = FileLogger("logs")
+engine = CoreValidationEngine(logger=logger)
 
-gr = Guardrails(api_key="sk-example-key", verbose=True)
+# Register validators for different validation points
+action_validator = ActionWhitelistValidator(allowed_actions=["search", "calculate"])
+content_validator = ContentFilterValidator(blocked_categories=["HARM", "HATE"])
 
-@tool
-def add(x: int, y: int) -> int:
-    """Add two numbers together."""
-    return x + y
+engine.register_validator(action_validator, ValidationPoint.PRE_ACTION)
+engine.register_validator(content_validator, ValidationPoint.PRE_OUTPUT)
 
-@gr.require_approval()
-def multiply(x: int, y: int) -> int:
-    """multiply two numbers"""
-    return x * y
+# Define LangChain components
+llm = ChatOpenAI(temperature=0)
+known_actions = {
+    "search": wikipedia_search,
+    "calculate": safe_calculator
+}
 
-tools = [add.as_tool(), multiply.as_tool()]`,
+# Create LangChain agent with guardrails
+agent = initialize_agent(
+    tools=known_actions.values(),
+    llm=llm,
+    agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+    validation_engine=engine  # Integrate guardrails
+)
+
+# Run agent with safety checks
+result = agent.run("What is the capital of France and its population?")
+# Will validate actions and content before execution`,
     openai: `import json
-import logging
 from openai import OpenAI
-from humanlayer import HumanLayer
-
-hl = HumanLayer.cloud(verbose=True)
-
-PROMPT = "multiply 2 and 5, then add 32 to the result"
-
-# add can be called without approval
-def add(x: int, y: int) -> int:
-    """Add two numbers together."""
-    return x + y
-
-# but multiply must be approved by a human
-@hl.require_approval()
-def multiply(x: int, y: int) -> int:
-    """multiply two numbers"""
-    return x * y`,
-    crewai: `from crewai import Agent, Task, Crew
 from guardrails.core.approval import Guardrails
 
 gr = Guardrails()
 
-@gr.require_approval()
-def execute_task(agent: Agent, task: Task):
-    """Execute task with safety validation."""
-    return agent.execute(task)
+# Function that can be called without approval
+def search_wikipedia(query: str) -> str:
+    """Search Wikipedia for information."""
+    return wikipedia.summary(query)
 
-# Create agents with guardrails
-researcher = Agent(
-    role='Researcher',
-    goal='Conduct thorough research',
-    backstory='Expert at analyzing data',
-    allow_delegation=False
-)`,
+# Function that requires human approval
+@gr.require_approval()
+def execute_code(code: str) -> str:
+    """Execute potentially risky code with human oversight."""
+    return eval(code)  # Only runs after approval
+
+# Example usage
+result = search_wikipedia("Python language")  # Runs immediately
+code_result = execute_code("print('Hello')")  # Requires approval`,
   }
 
   return (
     <div className="flex flex-col items-center justify-center py-20">
       <div className="text-center space-y-8 mb-16 max-w-[800px] mx-auto px-4">
-        <h1 className="text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
+        <h1 className="text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500 leading-tight pb-2">
           Guardrails for AI Agents
         </h1>
         <p className="text-xl text-muted-foreground">
@@ -103,7 +122,7 @@ researcher = Agent(
             <div className="text-xs text-gray-400 ml-2">example.py</div>
           </div>
           
-          <Tabs defaultValue="langchain" className="w-full">
+          <Tabs defaultValue="react" className="w-full">
             <div className="bg-[#252526] border-b border-[#333]">
               <TabsList className="w-full justify-start h-auto p-0 bg-transparent">
                 {frameworks.map((fw) => (
@@ -124,7 +143,7 @@ researcher = Agent(
                 <div className="relative">
                   <div className="p-6">
                     <Editor
-                      height="400px"
+                      height="550px"
                       defaultLanguage="python"
                       defaultValue={codeExamples[fw.id] || "# Example coming soon..."}
                       theme="vs-dark"
@@ -147,16 +166,6 @@ researcher = Agent(
                         padding: { top: 20, bottom: 20 }
                       }}
                     />
-                  </div>
-                  <div className="absolute top-8 right-8">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-xs text-gray-400 hover:text-white hover:bg-white/10"
-                      onClick={() => handleCopy(codeExamples[fw.id])}
-                    >
-                      Copy
-                    </Button>
                   </div>
                 </div>
               </TabsContent>
