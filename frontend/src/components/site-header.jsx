@@ -1,7 +1,6 @@
 import Link from "next/link"
-import { DiscordLogoIcon } from '@radix-ui/react-icons'
-import { Github } from 'lucide-react'
 import { Button } from "@/components/ui/button"
+import { FaDiscord, FaGithub } from 'react-icons/fa'
 
 export function SiteHeader() {
   return (
@@ -9,7 +8,7 @@ export function SiteHeader() {
       <div className="header-container flex h-16 items-center">
         <div className="flex items-center space-x-16">
           <Link href="/" className="font-bold text-xl">
-            Guardrails
+            Bumpers
           </Link>
           <nav className="flex items-center space-x-8 text-sm font-medium">
             <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -28,10 +27,10 @@ export function SiteHeader() {
         </div>
         <div className="ml-auto flex items-center space-x-6">
           <Button variant="ghost" size="icon" className="hover:bg-secondary">
-            <DiscordLogoIcon className="h-5 w-5" />
+            <FaDiscord className="h-5 w-5" />
           </Button>
           <Button variant="ghost" size="icon" className="hover:bg-secondary">
-            <Github className="h-5 w-5" />
+            <FaGithub className="h-5 w-5" />
           </Button>
           <Button variant="ghost" className="text-sm">Docs</Button>
           <Button variant="ghost" className="text-sm">Log in</Button>

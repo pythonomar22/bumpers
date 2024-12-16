@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Editor from "@monaco-editor/react"
+import { SiOpenai, SiLangchain } from 'react-icons/si'
+import { GiRobotGolem } from 'react-icons/gi'
 
 export function HeroSection() {
   const frameworks = [
-    { id: "react", name: "ReAct", icon: "🤖", default: true },
-    { id: "langchain", name: "LangChain", icon: "⛓️" },
-    { id: "openai", name: "OpenAI", icon: "🧠" },
+    { id: "react", name: "ReAct", icon: <GiRobotGolem className="w-5 h-5" />, default: true },
+    { id: "langchain", name: "LangChain", icon: <SiLangchain className="w-5 h-5" /> },
+    { id: "openai", name: "OpenAI", icon: <SiOpenai className="w-5 h-5" /> },
   ]
 
   const codeExamples = {
@@ -99,15 +101,20 @@ code_result = execute_code("print('Hello')")  # Requires approval`,
   return (
     <div className="flex flex-col items-center justify-center py-20">
       <div className="text-center space-y-8 mb-16 max-w-[800px] mx-auto px-4">
-        <h1 className="text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500 leading-tight pb-2">
-          Guardrails for AI Agents
-        </h1>
-        <p className="text-xl text-muted-foreground">
-          A powerful validation and safety framework that ensures AI agents operate within defined boundaries and ethical guidelines.
+        <div className="space-y-2">
+          <h1 className="text-7xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500 leading-tight">
+            Bumpers
+          </h1>
+          <p className="text-2xl font-medium text-gray-400">
+            Guardrails for AI Agents
+          </p>
+        </div>
+        <p className="text-lg text-muted-foreground/80 max-w-[600px] mx-auto">
+          An API and SDK for building safe and reliable AI agents that stay on task and within bounds.
         </p>
         <div className="flex items-center justify-center space-x-4 pt-4">
           <Button size="lg" className="h-12 px-8">Get Started</Button>
-          <Button variant="outline" size="lg" className="h-12 px-8">Watch Demo</Button>
+          <Button variant="outline" size="lg" className="h-12 px-8 bg-[#2A2A2A] hover:bg-[#333333]">Watch Demo</Button>
         </div>
       </div>
 
@@ -131,7 +138,7 @@ code_result = execute_code("print('Hello')")  # Requires approval`,
                     value={fw.id}
                     className="px-4 py-3 rounded-none data-[state=active]:bg-[#1e1e1e] data-[state=active]:border-b-2 data-[state=active]:border-[#007acc] text-[#8a8a8a] data-[state=active]:text-white flex items-center gap-2"
                   >
-                    <span>{fw.icon}</span>
+                    {fw.icon}
                     {fw.name}
                   </TabsTrigger>
                 ))}
