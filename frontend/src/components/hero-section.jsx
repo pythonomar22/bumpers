@@ -15,9 +15,9 @@ export function HeroSection() {
   ]
 
   const codeExamples = {
-    react: `from guardrails.integrations.react import GuardedReActAgent
-from guardrails.core.engine import CoreValidationEngine
-from guardrails.validators.action import ActionWhitelistValidator
+    react: `from bumpers.integrations.react import GuardedReActAgent
+from bumpers.core.engine import CoreValidationEngine
+from bumpers.validators.action import ActionWhitelistValidator
 
 # Initialize validation engine
 engine = CoreValidationEngine()
@@ -42,10 +42,10 @@ agent = GuardedReActAgent(
 result = agent.query("What is 20 * 15?", actions) `,
     langchain: `from langchain.agents import initialize_agent, AgentType
 from langchain_openai import ChatOpenAI
-from guardrails.core.engine import CoreValidationEngine, ValidationPoint
-from guardrails.validators.action import ActionWhitelistValidator
-from guardrails.validators.content import ContentFilterValidator
-from guardrails.logging import FileLogger
+from bumpers.core.engine import CoreValidationEngine, ValidationPoint
+from bumpers.validators.action import ActionWhitelistValidator
+from bumpers.validators.content import ContentFilterValidator
+from bumpers.logging import FileLogger
 
 # Initialize validation engine with logging
 logger = FileLogger("logs")
@@ -106,7 +106,7 @@ code_result = execute_code("print('Hello')")  # Requires approval`,
             Bumpers
           </h1>
           <p className="text-2xl font-medium text-gray-400">
-            Guardrails for AI Agents
+            guardrails for ai agents
           </p>
         </div>
         <p className="text-lg text-muted-foreground/80 max-w-[600px] mx-auto">
