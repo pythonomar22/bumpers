@@ -1,18 +1,18 @@
 import openai
 import numpy as np
-from guardrails.core.engine import CoreValidationEngine, ValidationPoint
-from guardrails.policy.parser import PolicyParser
-from guardrails.integrations.react import GuardedReActAgent
-from guardrails.logging.file_logger import FileLogger
-from guardrails.analytics.analyzer import GuardrailsAnalyzer
-from guardrails.monitoring.monitor import GuardrailsMonitor
-from guardrails.monitoring.conditions import (
+from bumpers.core.engine import CoreValidationEngine, ValidationPoint
+from bumpers.policy.parser import PolicyParser
+from bumpers.integrations.react import GuardedReActAgent
+from bumpers.logging.file_logger import FileLogger
+from bumpers.analytics.analyzer import BumpersAnalyzer
+from bumpers.monitoring.monitor import BumpersMonitor
+from bumpers.monitoring.conditions import (
     create_high_failure_rate_condition,
     create_repeated_intervention_condition
 )
-from guardrails.validators.semantic import SemanticDriftValidator
-from guardrails.validators.action import ActionWhitelistValidator
-from guardrails.validators.content import ContentFilterValidator
+from bumpers.validators.semantic import SemanticDriftValidator
+from bumpers.validators.action import ActionWhitelistValidator
+from bumpers.validators.content import ContentFilterValidator
 import json
 import os
 from pathlib import Path
@@ -36,13 +36,13 @@ def log_output(message):
 
 # Setup logging and analytics
 logger = FileLogger("logs")
-analyzer = GuardrailsAnalyzer(logger)  # Initialize analyzer here
+analyzer = BumpersAnalyzer(logger)
 
 # Initialize monitoring with custom alert handler
 def alert_handler(message: str):
     log_output(f"\n🚨 ALERT: {message}")
     
-monitor = GuardrailsMonitor(
+monitor = BumpersMonitor(
     logger=logger,
     alert_handlers=[alert_handler],
     check_interval=30

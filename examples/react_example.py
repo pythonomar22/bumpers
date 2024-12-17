@@ -1,11 +1,11 @@
 import openai
-from guardrails.core.engine import CoreValidationEngine, ValidationPoint
-from guardrails.policy.parser import PolicyParser
-from guardrails.integrations.react import GuardedReActAgent
-from guardrails.logging.file_logger import FileLogger
-from guardrails.analytics.analyzer import GuardrailsAnalyzer
-from guardrails.validators.action import ActionWhitelistValidator
-from guardrails.validators.content import ContentFilterValidator
+from bumpers.core.engine import CoreValidationEngine, ValidationPoint
+from bumpers.policy.parser import PolicyParser
+from bumpers.integrations.react import GuardedReActAgent
+from bumpers.logging.file_logger import FileLogger
+from bumpers.analytics.analyzer import GuardrailsAnalyzer
+from bumpers.validators.action import ActionWhitelistValidator
+from bumpers.validators.content import ContentFilterValidator
 import json
 import os
 from pathlib import Path

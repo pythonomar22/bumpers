@@ -1,6 +1,6 @@
-# Guardrails for AI Agents 🛡️
+# Bumpers 🛡️
 
-A Python library for adding safety guardrails, monitoring, and validation to AI agents. Guardrails helps ensure AI agents operate within defined boundaries and provides real-time monitoring of their behavior.
+A Python library for adding safety guardrails, monitoring, and validation to AI agents. Bumpers helps ensure AI agents operate within defined boundaries and provides real-time monitoring of their behavior.
 
 ## Features
 
@@ -14,20 +14,20 @@ A Python library for adding safety guardrails, monitoring, and validation to AI 
 ## Installation
 
 ```bash
-pip install guardrails
+pip install bumpers
 ```
 
 ## Quick Start
 
 ```python
-from guardrails.core.engine import CoreValidationEngine
-from guardrails.policy.parser import PolicyParser
-from guardrails.integrations.react import GuardedReActAgent
-from guardrails.logging.file_logger import FileLogger
+from bumpers.core.engine import CoreValidationEngine
+from bumpers.policy.parser import PolicyParser
+from bumpers.integrations.react import GuardedReActAgent
+from bumpers.logging.file_logger import FileLogger
 
 # Initialize components
 logger = FileLogger("logs")
-cve = CoreValidationEngine(logger=logger)
+engine = CoreValidationEngine(logger=logger)
 parser = PolicyParser()
 
 # Load policy
@@ -36,11 +36,11 @@ validators = parser.create_validators(policy)
 
 # Register validators
 for validator in validators:
-    cve.register_validator(validator)
+    engine.register_validator(validator)
 
 # Create guarded agent
 agent = GuardedReActAgent(
-    validation_engine=cve,
+    validation_engine=engine,
     bot_class=YourAgentClass,
     prompt=your_prompt
 )

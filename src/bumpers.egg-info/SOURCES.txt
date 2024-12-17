@@ -1,0 +1,7 @@
+README.md
+setup.py
+src/bumpers.egg-info/PKG-INFO
+src/bumpers.egg-info/SOURCES.txt
+src/bumpers.egg-info/dependency_links.txt
+src/bumpers.egg-info/requires.txt
+src/bumpers.egg-info/top_level.txt
