@@ -4,14 +4,44 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Editor from "@monaco-editor/react"
-import { SiOpenai, SiLangchain } from 'react-icons/si'
+import { SiOpenai, SiLangchain, SiGoogle } from 'react-icons/si'
 import { GiRobotGolem } from 'react-icons/gi'
+import { useState } from 'react'
 
 export function HeroSection() {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setMousePosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    })
+  }
+
   const frameworks = [
     { id: "react", name: "ReAct", icon: <GiRobotGolem className="w-5 h-5" />, default: true },
     { id: "langchain", name: "LangChain", icon: <SiLangchain className="w-5 h-5" /> },
     { id: "openai", name: "OpenAI", icon: <SiOpenai className="w-5 h-5" /> },
+    {
+      id: "mariner",
+      name: "Mariner",
+      icon: <SiGoogle className="w-4 h-4" />,
+      content: (
+        <div className="relative">
+          <div className="absolute top-2 right-2 text-xs text-[#8a8a8a] px-2 py-1 rounded-full border border-[#333]">
+            Coming Soon
+          </div>
+          <div className="p-4">
+            <pre className="text-sm text-[#8a8a8a]">
+              <code>
+                # Mariner integration coming soon
+              </code>
+            </pre>
+          </div>
+        </div>
+      )
+    }
   ]
 
   const codeExamples = {
@@ -99,10 +129,27 @@ code_result = execute_code("print('Hello')")  # Requires approval`,
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-20">
+    <div id="home" className="flex flex-col items-center justify-center py-20">
       <div className="text-center space-y-8 mb-16 max-w-[800px] mx-auto px-4">
         <div className="space-y-2">
-          <h1 className="text-7xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500 leading-tight">
+          <h1 
+            className="relative text-7xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500 leading-tight cursor-default overflow-hidden"
+            onMouseMove={handleMouseMove}
+            style={{
+              backgroundImage: `
+                radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, 
+                rgba(255, 255, 255, 1) 0%,
+                rgba(255, 255, 255, 0.8) 15%,
+                rgba(255, 255, 255, 0.6) 25%,
+                rgba(255, 255, 255, 0.4) 35%,
+                rgba(255, 255, 255, 0.2) 45%,
+                rgba(255, 255, 255, 0) 100%),
+                linear-gradient(to right, white, rgb(107 114 128))
+              `,
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+            }}
+          >
             bumpers
           </h1>
           <p className="text-2xl font-medium text-gray-400">
@@ -152,7 +199,7 @@ code_result = execute_code("print('Hello')")  # Requires approval`,
                     <Editor
                       height="550px"
                       defaultLanguage="python"
-                      defaultValue={codeExamples[fw.id] || "# Example coming soon..."}
+                      defaultValue={codeExamples[fw.id] || "# Functionality coming soon..."}
                       theme="vs-dark"
                       options={{
                         readOnly: true,
