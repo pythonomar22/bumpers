@@ -103,14 +103,14 @@ code_result = execute_code("print('Hello')")  # Requires approval`,
       <div className="text-center space-y-8 mb-16 max-w-[800px] mx-auto px-4">
         <div className="space-y-2">
           <h1 className="text-7xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500 leading-tight">
-            Bumpers
+            bumpers
           </h1>
           <p className="text-2xl font-medium text-gray-400">
             guardrails for ai agents
           </p>
         </div>
         <p className="text-lg text-muted-foreground/80 max-w-[600px] mx-auto">
-          An API and SDK for building safe and reliable AI agents that stay on task and within bounds.
+          an API and SDK for building safe and reliable AI agents that stay on task and within bounds
         </p>
         <div className="flex items-center justify-center space-x-4 pt-4">
           <Button size="lg" className="h-12 px-8">Get Started</Button>

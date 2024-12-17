@@ -8,7 +8,7 @@ export function SiteHeader() {
       <div className="header-container flex h-16 items-center">
         <div className="flex items-center space-x-16">
           <Link href="/" className="font-bold text-xl">
-            Bumpers
+            bumpers
           </Link>
           <nav className="flex items-center space-x-8 text-sm font-medium">
             <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
