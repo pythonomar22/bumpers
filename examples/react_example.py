@@ -36,7 +36,7 @@ class CerebrasChatBot:
         # Get completion from Cerebras
         response = self.client.chat.completions.create(
             messages=all_messages,
-            model="llama3.1-8b"  # Using 8B model for faster responses
+            model="llama3.3-70b"  # Using 8B model for faster responses
         )
         
         # Extract the response content
