@@ -166,16 +166,6 @@ export default function BlogPost() {
               We plan to build dashboards for real-time visualization of agent behavior, integration with CI/CD pipelines for compliance checks, and possibly a "coach" LLM that suggests policy improvements.
             </p>
           </section>
-
-          <div className="mt-16 p-8 bg-black/30 rounded-lg">
-            <h3 className="text-2xl font-bold mb-4">In Summary</h3>
-            <p className="mb-4">
-              Bumpers brings trust and safety to the next generation of AI agents by embedding guardrails directly into their decision-making loops. Whether you’re just blocking disallowed actions or performing detailed semantic drift checks, Bumpers ensures your agent remains aligned, safe, and effective—especially when combined with the speed of Cerebras inference.
-            </p>
-            <p className="mb-0">
-              We look forward to collaborating with the community, integrating more frameworks, and continuously improving our adaptive policies. The era of safe, aligned, and fast AI agents has arrived.
-            </p>
-          </div>
         </article>
       </main>
     </div>
