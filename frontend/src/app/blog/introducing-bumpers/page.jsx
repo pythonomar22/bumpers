@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/site-header"
+import { CodeDisplay } from "@/components/code-display"
 
 export default function BlogPost() {
   return (
@@ -59,28 +60,7 @@ export default function BlogPost() {
               We define validators like ActionWhitelistValidator and ContentFilterValidator. For example:
             </p>
             
-            <pre className="bg-black/30 p-4 rounded-lg mb-4 overflow-x-auto">
-              <code className="text-sm text-white">
-{`class ActionWhitelistValidator(BaseValidator):
-    def __init__(self, allowed_actions):
-        super().__init__("action_whitelist")
-        self.allowed = set(allowed_actions)
-    
-    def validate(self, context):
-        action = context.get("action")
-        if action not in self.allowed:
-            return ValidationResult(False, 
-                                 f"Action '{action}' not allowed", 
-                                 self.name, 
-                                 ValidationPoint.PRE_ACTION, 
-                                 context)
-        return ValidationResult(True, 
-                              f"Action '{action}' is allowed",
-                              self.name,
-                              ValidationPoint.PRE_ACTION,
-                              context)`}
-              </code>
-            </pre>
+            <CodeDisplay />
             
             <p className="mb-4">
               Policies (in YAML) map these validators to validation points, enabling quick configuration changes without code rewrites.
