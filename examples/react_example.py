@@ -1,20 +1,48 @@
-import openai
+import os
+from cerebras.cloud.sdk import Cerebras
 from bumpers.core.engine import CoreValidationEngine, ValidationPoint
 from bumpers.policy.parser import PolicyParser
 from bumpers.integrations.react import GuardedReActAgent
 from bumpers.logging.file_logger import FileLogger
-from bumpers.analytics.analyzer import GuardrailsAnalyzer
+from bumpers.analytics.analyzer import BumpersAnalyzer
 from bumpers.validators.action import ActionWhitelistValidator
 from bumpers.validators.content import ContentFilterValidator
 import json
 import os
 from pathlib import Path
 
-# Set OpenAI API key
-openai.api_key = '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'
+# Set Cerebras API key
+os.environ["CEREBRAS_API_KEY"] = "csk-pem8ktwk3hphrxcmtwej9phdtfxne5xwy8eewnhp5tf4v5xw"
 
 # Import the original ReAct components
-from original_react import ChatBot, wikipedia, calculate
+from original_react import wikipedia, calculate
+
+# Create a ChatBot class that uses Cerebras
+class CerebrasChatBot:
+    def __init__(self, system=""):
+        self.system = system
+        self.messages = []
+        self.client = Cerebras()
+
+    def __call__(self, message):
+        self.messages.append({"role": "user", "content": message})
+        
+        # Prepare messages including system prompt
+        all_messages = []
+        if self.system:
+            all_messages.append({"role": "system", "content": self.system})
+        all_messages.extend(self.messages)
+        
+        # Get completion from Cerebras
+        response = self.client.chat.completions.create(
+            messages=all_messages,
+            model="llama3.1-8b"  # Using 8B model for faster responses
+        )
+        
+        # Extract the response content
+        result = response.choices[0].message.content
+        self.messages.append({"role": "assistant", "content": result})
+        return result
 
 # Initialize logger
 logger = FileLogger("logs")
@@ -47,11 +75,11 @@ known_actions = {
 
 prompt = """
 You run in a loop of Thought, Action, Observation, Answer.
-At the end of the loop you output an Answer
+At the end of the loop you output an Answer.
 Use Thought to describe your thoughts about the question you have been asked.
 Use Action to run one of the actions available to you.
 Observation will be the result of running those actions.
-Answer will be the result of analysing the Observation
+Answer will be the result of analyzing the Observation.
 
 Your available actions are:
 
@@ -64,11 +92,12 @@ e.g. wikipedia: Django
 Returns a summary from searching Wikipedia
 
 Always look things up on Wikipedia if you have the opportunity to do so.
+Be concise and focused in your responses.
 """.strip()
 
 agent = GuardedReActAgent(
     validation_engine=cve,
-    bot_class=ChatBot,
+    bot_class=CerebrasChatBot,  # Using our Cerebras-based bot
     prompt=prompt
 )
 
@@ -92,7 +121,7 @@ for question in test_questions:
         print("Error:", str(e))
 
 # Generate analytics
-analyzer = GuardrailsAnalyzer(logger)
+analyzer = BumpersAnalyzer(logger)
 stats = analyzer.get_validation_stats()
 interventions = analyzer.get_intervention_summary()
 
