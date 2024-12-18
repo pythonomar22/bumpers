@@ -19,7 +19,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Set OpenAI API key
-openai.api_key = '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'
+openai.api_key = ''
 
 # Import the original ReAct components
 from original_react import ChatBot, wikipedia, calculate
