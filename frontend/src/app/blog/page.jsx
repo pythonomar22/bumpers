@@ -8,7 +8,7 @@ export default function Blog() {
       <main className="container py-24">
         <div className="grid grid-cols-1 gap-8 max-w-sm">
           <BlogCard
-            title="Introducing Bumpers: Safety Guardrails for AI Agents"
+            title="bumpers: safety guardrails for AI agents"
             description="Learn how Bumpers helps you build safer and more reliable AI agents with built-in guardrails and validation."
             date="March 20, 2024"
             href="/blog/introducing-bumpers"
