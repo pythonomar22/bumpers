@@ -8,10 +8,16 @@ setup(
     install_requires=[
         "numpy",
         "pyyaml",
-        "openai==0.28.1",
-        "httpx"
+        "httpx",
+        "sentence-transformers",
+        "cerebras-cloud-sdk",
+        "torch",
     ],
     extras_require={
-        "dev": ["pytest", "black", "flake8"]
+        "dev": [
+            "pytest",
+            "black",
+            "flake8",
+        ]
     }
 ) 

@@ -1,4 +1,6 @@
 numpy
 pyyaml
-openai
-httpx 
+httpx
+sentence-transformers>=2.2.0
+cerebras-cloud-sdk>=1.14.0
+torch>=2.0.0 
