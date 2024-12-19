@@ -12,9 +12,10 @@ A Python library for adding safety guardrails, monitoring, and validation to AI 
 - 📝 **Logging & Analytics**: Track and analyze agent behavior  
 
 ## Installation
+From the root directory, run:
 
 ```bash
-pip install bumpers
+pip install -e .
 ```
 
 ## Quick Start
