@@ -203,30 +203,3 @@ class CustomValidator(BaseValidator):
             context=context
         )
 ```
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-- 📚 **Documentation**: [docs/](docs/)
-- 🐛 **Issue Tracker**: [GitHub Issues](https://github.com/yourusername/guardrails/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/guardrails/discussions)
-
-## Citation
-
-If you use Guardrails in your research, please cite:
-
-```bibtex
-@software{guardrails2024,
-  author = {Your Name},
-  title = {Guardrails: Safety Validation for AI Agents},
-  year = {2024},
-  publisher = {GitHub},
-  url = {https://github.com/yourusername/guardrails}
-}
