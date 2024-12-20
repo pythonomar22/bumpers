@@ -2,6 +2,8 @@ numpy
 pyyaml
 openai==0.28.1
 httpx
+langchain
+sentence-transformers
 
 [dev]
 pytest
