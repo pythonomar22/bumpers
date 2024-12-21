@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 # Set Cerebras API key
-os.environ["CEREBRAS_API_KEY"] = ""
+os.environ["CEREBRAS_API_KEY"] = "csk-f3m959kwvdc9jewmywhpr9nr6w4yvtcht5tr6ke42yj6fypc"
 
 # Import the original ReAct components
 from original_react import wikipedia, calculate

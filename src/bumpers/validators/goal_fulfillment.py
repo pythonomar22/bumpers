@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from .base import BaseValidator
+from .base import BaseValidator, FailStrategy
 from ..core.engine import ValidationResult, ValidationPoint
 
 class GoalFulfillmentValidator(BaseValidator):
@@ -10,8 +10,10 @@ class GoalFulfillmentValidator(BaseValidator):
     a generic response.
     """
 
-    def __init__(self, name: str = "goal_fulfillment"):
-        super().__init__(name)
+    def __init__(self, 
+                 name: str = "goal_fulfillment",
+                 fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR):
+        super().__init__(name, fail_strategy)
 
     def validate(self, context: Dict[str, Any]) -> ValidationResult:
         question = context.get("question", "").lower()
@@ -39,7 +41,8 @@ class GoalFulfillmentValidator(BaseValidator):
                 message=f"Goal not fulfilled. Missing key terms: {missing_terms}",
                 validator_name=self.name,
                 validation_point=ValidationPoint.PRE_OUTPUT,
-                context=context
+                context=context,
+                fail_strategy=self.fail_strategy
             )
         
         return ValidationResult(
@@ -47,5 +50,6 @@ class GoalFulfillmentValidator(BaseValidator):
             message="Goal appears to be fulfilled.",
             validator_name=self.name,
             validation_point=ValidationPoint.PRE_OUTPUT,
-            context=context
+            context=context,
+            fail_strategy=self.fail_strategy
         )

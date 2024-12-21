@@ -1,6 +1,6 @@
 from typing import Dict, Any
 from cerebras.cloud.sdk import Cerebras
-from .base import BaseValidator
+from .base import BaseValidator, FailStrategy
 from ..core.engine import ValidationResult, ValidationPoint
 
 class LLMSafetyValidator(BaseValidator):
@@ -8,8 +8,9 @@ class LLMSafetyValidator(BaseValidator):
     def __init__(self, 
                  api_key: str = None,
                  name: str = "llm_safety",
-                 temperature: float = 0.0):
-        super().__init__(name)
+                 temperature: float = 0.0,
+                 fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR):
+        super().__init__(name, fail_strategy)
         self.client = Cerebras()
         self.temperature = temperature
         self.safety_prompt = """
@@ -63,5 +64,6 @@ class LLMSafetyValidator(BaseValidator):
             message=assessment,
             validator_name=self.name,
             validation_point=ValidationPoint.PRE_OUTPUT,
-            context=context
+            context=context,
+            fail_strategy=self.fail_strategy
         ) 

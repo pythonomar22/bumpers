@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from .base import BaseValidator
+from .base import BaseValidator, FailStrategy
 from ..core.engine import ValidationResult, ValidationPoint
 
 class TemporalRelevanceValidator(BaseValidator):
@@ -9,8 +9,10 @@ class TemporalRelevanceValidator(BaseValidator):
     check if the final output references or attempts to address that specific timeframe.
     """
 
-    def __init__(self, name: str = "temporal_relevance"):
-        super().__init__(name)
+    def __init__(self, 
+                 name: str = "temporal_relevance",
+                 fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR):
+        super().__init__(name, fail_strategy)
 
     def validate(self, context: Dict[str, Any]) -> ValidationResult:
         question = context.get("question", "").lower()
@@ -28,7 +30,8 @@ class TemporalRelevanceValidator(BaseValidator):
                 message="No temporal constraints identified in the question.",
                 validator_name=self.name,
                 validation_point=ValidationPoint.PRE_OUTPUT,
-                context=context
+                context=context,
+                fail_strategy=self.fail_strategy
             )
 
         # If temporal terms are in question, ensure the output addresses them.
@@ -42,7 +45,8 @@ class TemporalRelevanceValidator(BaseValidator):
                 message=f"Temporal request not addressed. Missing terms: {missing_temporal}",
                 validator_name=self.name,
                 validation_point=ValidationPoint.PRE_OUTPUT,
-                context=context
+                context=context,
+                fail_strategy=self.fail_strategy
             )
 
         return ValidationResult(
@@ -50,5 +54,6 @@ class TemporalRelevanceValidator(BaseValidator):
             message="Temporal aspects addressed.",
             validator_name=self.name,
             validation_point=ValidationPoint.PRE_OUTPUT,
-            context=context
+            context=context,
+            fail_strategy=self.fail_strategy
         )

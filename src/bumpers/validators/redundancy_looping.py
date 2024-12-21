@@ -1,5 +1,5 @@
 from typing import Dict, Any, List
-from .base import BaseValidator
+from .base import BaseValidator, FailStrategy
 from ..core.engine import ValidationResult, ValidationPoint
 
 class RedundancyLoopingValidator(BaseValidator):
@@ -11,8 +11,9 @@ class RedundancyLoopingValidator(BaseValidator):
 
     def __init__(self, 
                  max_repeated_actions: int = 3,
-                 name: str = "redundancy_looping"):
-        super().__init__(name)
+                 name: str = "redundancy_looping",
+                 fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR):
+        super().__init__(name, fail_strategy)
         self.max_repeats = max_repeated_actions
         self.action_history: List[str] = []
 
@@ -36,7 +37,8 @@ class RedundancyLoopingValidator(BaseValidator):
                     message=f"Redundant looping detected: {self.max_repeats} identical actions in a row ({recent[0]}).",
                     validator_name=self.name,
                     validation_point=ValidationPoint.PRE_ACTION,
-                    context=context
+                    context=context,
+                    fail_strategy=self.fail_strategy
                 )
 
         return ValidationResult(
@@ -44,5 +46,6 @@ class RedundancyLoopingValidator(BaseValidator):
             message="No excessive redundancy/looping detected.",
             validator_name=self.name,
             validation_point=ValidationPoint.PRE_ACTION,
-            context=context
+            context=context,
+            fail_strategy=self.fail_strategy
         )

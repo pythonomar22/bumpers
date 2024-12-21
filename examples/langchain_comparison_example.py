@@ -7,7 +7,7 @@ from langchain.agents.format_scratchpad.openai_tools import format_to_openai_too
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 
 import os
-os.environ["OPENAI_API_KEY"] = ""
+os.environ["OPENAI_API_KEY"] = "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"
 
 # Bumpers imports
 from bumpers.core.engine import CoreValidationEngine, ValidationPoint
@@ -124,9 +124,9 @@ def test_agents():
             result = protected_agent.invoke({"input": question})
             print(f"Result: {result['output']}")
         except KeyboardInterrupt as ke:
-            print(f"KeyboardInterrupt triggered: {str(ke)} - Execution halted.")
+            print(f"{str(ke)} - Execution halted.")
         except RuntimeError as re:
-            print(f"RuntimeError triggered: {str(re)} - Continuing or chain may swallow it.")
+            print(f"{str(re)} - Continuing or chain may swallow it.")
         except Exception as e:
             print(f"Other error: {str(e)}")
         print("-" * 50)

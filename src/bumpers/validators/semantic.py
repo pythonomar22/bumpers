@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional, List
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from .base import BaseValidator
+from .base import BaseValidator, FailStrategy
 from ..core.engine import ValidationResult, ValidationPoint
 
 class SemanticDriftValidator(BaseValidator):
@@ -13,7 +13,8 @@ class SemanticDriftValidator(BaseValidator):
                  model_name: str = "all-MiniLM-L6-v2",
                  similarity_threshold: float = 0.7,
                  context_window: int = 3,
-                 name: str = "semantic_drift"):
+                 name: str = "semantic_drift",
+                 fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR):
         """
         Initialize the semantic drift validator.
         
@@ -22,8 +23,9 @@ class SemanticDriftValidator(BaseValidator):
             similarity_threshold: Minimum cosine similarity required
             context_window: Number of previous responses to maintain for context
             name: Validator name
+            fail_strategy: Strategy to use when validation fails
         """
-        super().__init__(name)
+        super().__init__(name, fail_strategy)
         self.model = SentenceTransformer(model_name)
         self.similarity_threshold = similarity_threshold
         self.context_window = context_window
@@ -125,7 +127,8 @@ class SemanticDriftValidator(BaseValidator):
                 message="Initial goal embedding stored",
                 validator_name=self.name,
                 validation_point=ValidationPoint.PRE_OUTPUT,
-                context=context
+                context=context,
+                fail_strategy=self.fail_strategy
             )
             
         # Get current context embedding
@@ -142,7 +145,8 @@ class SemanticDriftValidator(BaseValidator):
                 message="No content to validate",
                 validator_name=self.name,
                 validation_point=ValidationPoint.PRE_OUTPUT,
-                context=context
+                context=context,
+                fail_strategy=self.fail_strategy
             )
             
         # Get embedding with context consideration
@@ -172,7 +176,8 @@ class SemanticDriftValidator(BaseValidator):
                 message=f"Semantic drift detected:\n" + "\n".join(drift_details),
                 validator_name=self.name,
                 validation_point=ValidationPoint.PRE_OUTPUT,
-                context=context
+                context=context,
+                fail_strategy=self.fail_strategy
             )
             
         return ValidationResult(
@@ -180,5 +185,6 @@ class SemanticDriftValidator(BaseValidator):
             message=f"Response maintains semantic similarity: {similarity:.2f}",
             validator_name=self.name,
             validation_point=ValidationPoint.PRE_OUTPUT,
-            context=context
+            context=context,
+            fail_strategy=self.fail_strategy
         ) 
