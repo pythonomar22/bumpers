@@ -7,7 +7,7 @@ from langchain.agents.format_scratchpad.openai_tools import format_to_openai_too
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 
 import os
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = ""
 
 # Bumpers imports
 from bumpers.core.engine import CoreValidationEngine, ValidationPoint
