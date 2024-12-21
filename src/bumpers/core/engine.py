@@ -3,10 +3,11 @@ from dataclasses import dataclass
 from enum import Enum
 from ..logging.base import BaseLogger, LogEvent
 from datetime import datetime
+from ..validators.base import FailStrategy  # This is safe now (no engine -> base loop)
 
 class ValidationPoint(Enum):
     PRE_ACTION = "pre_action"
-    POST_ACTION = "post_action" 
+    POST_ACTION = "post_action"
     PRE_OUTPUT = "pre_output"
     POST_OUTPUT = "post_output"
 
@@ -17,6 +18,7 @@ class ValidationResult:
     validator_name: str
     validation_point: ValidationPoint
     context: Dict[str, Any]
+    fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR
 
 class ValidationError(Exception):
     def __init__(self, result: ValidationResult):
@@ -66,6 +68,7 @@ class CoreValidationEngine:
         
         for validator in self._validators[point]:
             try:
+                # validator.validate should return a ValidationResult
                 result = validator.validate(context)
                 results.append(result)
                 self._log_validation(result)
@@ -76,12 +79,14 @@ class CoreValidationEngine:
                     
             except Exception as e:
                 if not isinstance(e, ValidationError):
+                    # unexpected error in validator code
                     result = ValidationResult(
                         passed=False,
                         message=f"Validator failed with error: {str(e)}",
                         validator_name=validator.name,
                         validation_point=point,
-                        context=context
+                        context=context,
+                        fail_strategy=validator.fail_strategy
                     )
                     results.append(result)
                     self._log_validation(result)
@@ -89,4 +94,4 @@ class CoreValidationEngine:
                     raise ValidationError(result)
                 raise
                 
-        return results 
+        return results
