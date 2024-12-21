@@ -18,8 +18,28 @@ Add safety guardrails to your AI agents with just a few lines of code. Bumpers i
 
 ## 🚀 Quick Start
 
+### Installation
+
+1. Clone the repository:
 ```bash
-pip install bumpers
+git clone https://github.com/pythonomar22/bumpers.git
+cd bumpers
+```
+
+2. Create and activate a virtual environment (recommended):
+```bash
+# On macOS/Linux
+python -m venv bumpersvenv
+source bumpersvenv/bin/activate
+
+# On Windows
+python -m venv bumpersvenv
+bumpersvenv\Scripts\activate
+```
+
+3. Install in editable mode:
+```bash
+pip install -e .
 ```
 
 ### Basic Usage with LangChain
@@ -169,22 +189,6 @@ class CustomValidator(BaseValidator):
         )
 ```
 
-## 📚 Documentation
-
-For full documentation, visit [docs.bumpers.ai](https://docs.bumpers.ai)
-
-## 🤝 Contributing
-
-We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
-
-## 📝 License
-
-MIT License - see [LICENSE](LICENSE) for details
-
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/bumpers&type=Date)](https://star-history.com/#yourusername/bumpers&Date)
-
-## 🙏 Acknowledgments
-
-Built with ❤️ by the Bumpers team. Special thanks to our contributors and the AI safety community.
+[![Star History Chart](https://api.star-history.com/svg?repos=pythonomar22/bumpers&type=Date)](https://star-history.com/#yourusername/bumpers&Date)
