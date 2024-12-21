@@ -1,206 +1,190 @@
-# Bumpers 🛡️
+# 🛡️ Bumpers
 
-A Python library for adding safety guardrails, monitoring, and validation to AI agents. Bumpers helps ensure AI agents operate within defined boundaries and provides real-time monitoring of their behavior.
+Add safety guardrails to your AI agents with just a few lines of code. Bumpers is a Python library that helps you build safer AI applications by validating agent actions and outputs in real-time.
 
-## Features
+![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 
-- 🔒 **Validation Engine**: Pre-action and pre-output validation  
-- 📜 **Policy Management**: YAML-based policy definitions  
-- ⛔️ **Content Filtering**: Block sensitive or inappropriate content  
-- 🎯 **Semantic Drift Detection**: Keep AI responses on topic  
-- 📊 **Real-time Monitoring**: Alert on suspicious patterns  
-- 📝 **Logging & Analytics**: Track and analyze agent behavior  
+## ✨ Features
 
-## Installation
-From the root directory, run:
+- 🔒 **Validation Engine**: Pre-built validators for common safety checks
+- 🤖 **Framework Support**: Works with both custom agents and popular frameworks like LangChain
+- 🚫 **Action Control**: Whitelist allowed actions and block dangerous operations
+- 🔍 **Content Filtering**: Detect and block sensitive or inappropriate content
+- 📊 **Semantic Monitoring**: Track semantic drift and goal fulfillment
+- ⏱️ **Rate Limiting**: Prevent infinite loops and resource abuse
+- 📝 **Logging & Analytics**: Track and analyze agent behavior
+
+## 🚀 Quick Start
 
 ```bash
-pip install -e .
+pip install bumpers
 ```
 
-## Quick Start
+### Basic Usage with LangChain
 
 ```python
+from langchain.agents import AgentExecutor
 from bumpers.core.engine import CoreValidationEngine
-from bumpers.policy.parser import PolicyParser
-from bumpers.integrations.react import GuardedReActAgent
-from bumpers.logging.file_logger import FileLogger
+from bumpers.validators.action import ActionWhitelistValidator
+from bumpers.validators.content import ContentFilterValidator
+from bumpers.integrations.langchain_callback import BumpersLangChainCallback
 
-# Initialize components
-logger = FileLogger("logs")
-engine = CoreValidationEngine(logger=logger)
-parser = PolicyParser()
+# Set up validation engine
+validation_engine = CoreValidationEngine()
 
-# Load policy
-policy = parser.load_policy_file('policies/policy.yaml')
-validators = parser.create_validators(policy)
-
-# Register validators
-for validator in validators:
-    engine.register_validator(validator)
-
-# Create guarded agent
-agent = GuardedReActAgent(
-    validation_engine=engine,
-    bot_class=YourAgentClass,
-    prompt=your_prompt
+# Add validators
+validation_engine.register_validator(
+    ActionWhitelistValidator(allowed_actions=["search", "calculate"]),
+    ValidationPoint.PRE_ACTION
+)
+validation_engine.register_validator(
+    ContentFilterValidator(forbidden_words=["confidential", "secret"]),
+    ValidationPoint.PRE_OUTPUT
 )
 
-# Use the agent
-result = agent.query("What is 2 + 2?", known_actions)
+# Create Bumpers callback
+bumpers_callback = BumpersLangChainCallback(validation_engine=validation_engine)
+
+# Add to your LangChain agent
+agent_executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    callbacks=[bumpers_callback]  # Add Bumpers protection
+)
+
+# Use normally - Bumpers will automatically protect your agent
+result = agent_executor.invoke({"input": "What's 2 + 2?"})
 ```
 
-## Policy Definition
+## 🛡️ Available Validators
 
-Define validation rules in YAML:
+### Action Control
+- `ActionWhitelistValidator`: Restrict which actions an agent can perform
+- `ResourceValidator`: Prevent resource-intensive operations
+- `RateLimitValidator`: Control action frequency
 
-```yaml
-validators:
-  - name: "allowed_actions"
-    type: "ActionWhitelist"
-    parameters:
-      allowed_actions: ["calculate", "wikipedia"]
-    applies_to: "PRE_ACTION"
-    on_fail: "block_action"
-  
-  - name: "content_filter"
-    type: "ContentFilter"
-    parameters:
-      forbidden_words: ["confidential", "secret"]
-      max_length: 1000
-    applies_to: "PRE_OUTPUT"
-    on_fail: "block_response"
-```
+### Content Safety
+- `ContentFilterValidator`: Block sensitive or inappropriate content
+- `LLMSafetyValidator`: Use LLMs to validate content safety
+- `PatternValidator`: Block content matching specific patterns
 
-## Available Validators
+### Semantic Control
+- `SemanticDriftValidator`: Keep responses on topic
+- `GoalFulfillmentValidator`: Ensure answers address the original question
+- `TemporalRelevanceValidator`: Validate time-based responses
 
-### ActionWhitelistValidator
+### Chain Control
+- `ChainLengthValidator`: Limit action chain length
+- `RedundancyLoopingValidator`: Detect and prevent action loops
 
-Ensures agents only use approved actions.
+## 🔍 Monitoring & Analytics
+
+Track agent behavior and get alerts:
 
 ```python
-validator = ActionWhitelistValidator(
-    allowed_actions=["calculate", "wikipedia"]
-)
-```
+from bumpers.monitoring.monitor import BumpersMonitor
+from bumpers.monitoring.conditions import create_high_failure_rate_condition
 
-### ContentFilterValidator
+def alert_handler(message):
+    print(f"🚨 Alert: {message}")
 
-Filters output based on forbidden words and length.
-
-```python
-validator = ContentFilterValidator(
-    forbidden_words=["confidential", "secret"],
-    max_length=1000
-)
-```
-
-### SemanticDriftValidator
-
-Prevents responses from going off-topic.
-
-```python
-validator = SemanticDriftValidator(
-    embedding_model=your_embedding_model,
-    similarity_threshold=0.7
-)
-```
-
-## Monitoring & Alerts
-
-Set up real-time monitoring with custom alerts:
-
-```python
-from guardrails.monitoring.monitor import GuardrailsMonitor
-from guardrails.monitoring.conditions import (
-    create_high_failure_rate_condition,
-    create_repeated_intervention_condition
-)
-
-def alert_handler(message: str):
-    print(f"🚨 ALERT: {message}")
-
-monitor = GuardrailsMonitor(
+# Create monitor
+monitor = BumpersMonitor(
     logger=logger,
-    alert_handlers=[alert_handler],
-    check_interval=30
+    alert_handlers=[alert_handler]
 )
 
-# Add monitoring conditions
+# Add conditions
 monitor.add_condition(
     create_high_failure_rate_condition(threshold=0.3)
-)
-monitor.add_condition(
-    create_repeated_intervention_condition(
-        action="wikipedia",
-        count=2
-    )
 )
 
 # Start monitoring
 monitor.start()
 ```
 
-## Logging & Analytics
+## 📊 Analytics
 
-Track and analyze agent behavior:
+Analyze agent behavior:
 
 ```python
-from guardrails.analytics.analyzer import GuardrailsAnalyzer
+from bumpers.analytics.analyzer import BumpersAnalyzer
 
-analyzer = GuardrailsAnalyzer(logger)
+analyzer = BumpersAnalyzer(logger)
 
-# Get statistics
+# Get validation statistics
 stats = analyzer.get_validation_stats()
-interventions = analyzer.get_intervention_summary()
+print("Validation Stats:", stats)
 
-print("Validation Statistics:", stats)
-print("Intervention Summary:", interventions)
+# Get intervention summary
+summary = analyzer.get_intervention_summary()
+print("Interventions:", summary)
 ```
 
-## Integration Examples
+## 🎯 Fail Strategies
 
-### With ReAct Agent
+Customize how validators handle failures:
 
 ```python
-from guardrails.integrations.react import GuardedReActAgent
+from bumpers.validators.base import FailStrategy
 
-agent = GuardedReActAgent(
-    validation_engine=cve,
-    bot_class=ChatBot,
-    prompt=prompt
+validator = ContentFilterValidator(
+    forbidden_words=["confidential"],
+    fail_strategy=FailStrategy.STOP  # Immediately halt execution
 )
 
-result = agent.query(
-    "What is 20 15?",
-    known_actions={"calculate": calculate}
+validator = RateLimitValidator(
+    max_actions_per_minute=10,
+    fail_strategy=FailStrategy.RAISE_ERROR  # Raise exception but allow catching
+)
+
+validator = PatternValidator(
+    patterns=[r"sensitive\s+data"],
+    fail_strategy=FailStrategy.LOG_ONLY  # Just log the violation
 )
 ```
 
-## Validation Points
+## 🔧 Custom Validators
 
-- `PRE_ACTION`: Validates actions before execution
-- `PRE_OUTPUT`: Validates responses before sending to user
-
-## Custom Validators
-
-Create custom validators by inheriting from `BaseValidator`:
+Create your own validators:
 
 ```python
-from guardrails.validators.base import BaseValidator
-from guardrails.core.engine import ValidationResult, ValidationPoint
+from bumpers.validators.base import BaseValidator
+from bumpers.core.engine import ValidationResult, ValidationPoint
 
 class CustomValidator(BaseValidator):
     def __init__(self, name: str = "custom"):
         super().__init__(name)
 
     def validate(self, context: dict) -> ValidationResult:
-        # Implement validation logic
+        # Implement your validation logic
         return ValidationResult(
             passed=True,
             message="Validation passed",
             validator_name=self.name,
-            validation_point=ValidationPoint.PRE_OUTPUT,
+            validation_point=ValidationPoint.PRE_ACTION,
             context=context
         )
 ```
+
+## 📚 Documentation
+
+For full documentation, visit [docs.bumpers.ai](https://docs.bumpers.ai)
+
+## 🤝 Contributing
+
+We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
+
+## 📝 License
+
+MIT License - see [LICENSE](LICENSE) for details
+
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/bumpers&type=Date)](https://star-history.com/#yourusername/bumpers&Date)
+
+## 🙏 Acknowledgments
+
+Built with ❤️ by the Bumpers team. Special thanks to our contributors and the AI safety community.
