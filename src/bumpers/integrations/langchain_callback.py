@@ -42,9 +42,15 @@ class BumpersLangChainCallback(BaseCallbackHandler):
             raise RuntimeError(error.result.message)
 
     def on_chain_start(self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any) -> None:
-        if prompts:
+        """Called at the start of a chain run"""
+        # More safely extract the current question from prompts
+        if prompts and isinstance(prompts, list) and len(prompts) > 0:
             self.current_question = prompts[0]
+        elif serialized and isinstance(serialized, dict):
+            # If we can't get the question from prompts, try the inputs
+            self.current_question = serialized.get("input", "")
         else:
+            # If neither source is available, use empty string
             self.current_question = ""
 
     def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
