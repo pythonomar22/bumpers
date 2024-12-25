@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
-from .base import BaseValidator, FailStrategy
-from ..core.engine import ValidationResult, ValidationPoint
+from .base import BaseValidator
+from ..types import ValidationResult, ValidationPoint, FailStrategy
 
 class ActionWhitelistValidator(BaseValidator):
     def __init__(self, allowed_actions: List[str], name: str = "action_whitelist", fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR):

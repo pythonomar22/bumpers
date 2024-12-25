@@ -1,24 +1,7 @@
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
-from enum import Enum
-from ..logging.base import BaseLogger, LogEvent
 from datetime import datetime
-from ..validators.base import FailStrategy  # This is safe now (no engine -> base loop)
-
-class ValidationPoint(Enum):
-    PRE_ACTION = "pre_action"
-    POST_ACTION = "post_action"
-    PRE_OUTPUT = "pre_output"
-    POST_OUTPUT = "post_output"
-
-@dataclass
-class ValidationResult:
-    passed: bool
-    message: str
-    validator_name: str
-    validation_point: ValidationPoint
-    context: Dict[str, Any]
-    fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR
+from ..logging.base import BaseLogger, LogEvent
+from ..types import ValidationPoint, ValidationResult, FailStrategy
 
 class ValidationError(Exception):
     def __init__(self, result: ValidationResult):
