@@ -1,0 +1,153 @@
+Below is a step-by-step technical guide describing how to integrate a Vision Language Model (VLM) into a Bumpers-like safety framework for agents that have a visual component (e.g., a browser agent or any agent that interacts with a graphical environment). The guide is code-free, focusing on design and architectural details so another engineer could follow it to implement.
+
+1. Motivation & High-Level Architecture
+Why add visual checks?
+
+Agents that manipulate user interfaces, browser windows, or other graphical environments might display sensitive information, confirm button clicks, or perform actions on pages that could violate policies.
+Text-based validators cannot fully inspect or interpret images, especially if a web page shows private content not evident in textual HTML. A Vision Language Model can see the actual screen state, detect sensitive text or images, and ensure alignment with safety constraints.
+Where does the VLM fit in?
+
+Traditional Bumpers validations happen at textual ValidationPoints (e.g., PRE_ACTION, PRE_OUTPUT).
+A VLM-based check requires capturing an image (or multiple images) of the agent’s visual environment, sending that image to a VLM, and interpreting the VLM’s output to decide whether the agent is following policy.
+Example Flow (browser agent scenario):
+
+Agent wants to fill a form with user data.
+Bumpers requests a screenshot of the page (the visual aspect).
+Bumpers sends that screenshot to the VLM.
+The VLM returns in natural language (e.g., “The page shows a form asking for SSN.”).
+Bumpers policy checks if that’s disallowed.
+If disallowed, Bumpers blocks or raises an error.
+2. Capture Strategy for Visual Frames
+A key challenge is deciding when and how to capture screenshots or visual states. Options include:
+
+Action-Triggered Capture
+
+Each time the agent tries an action (click, type, or scroll), Bumpers requests a screenshot before the action (or just after it, depending on the usage).
+If the agent is mid-step, you might also capture a screenshot at crucial transitions (like a pop-up appears).
+Interval-Based Capture
+
+Capture a screenshot every N seconds or every time the agent has paused for T seconds.
+Risk: This can produce a large volume of images, some redundant.
+Event-Based Capture
+
+Only capture screenshots on certain high-risk events (navigating to a new domain, encountering a login page, filling forms, etc.).
+Fewer captures but might miss unexpected transitions.
+Recommendation: Start with Action-Triggered capturing. This lines up naturally with ValidationPoints like PRE_ACTION (capture the screen right before the agent clicks a button). Minimizes overhead while still being comprehensive.
+
+3. Image Pipeline & Pre-Processing
+Screenshot retrieval
+
+If this is a browser agent, you likely have a method (like browser_context.get_screenshot()) returning a binary image.
+If it’s another environment (like a remote desktop or a specialized UI), find a stable function that returns PNG/JPEG data.
+Image conversion
+
+The VLM typically wants a specific format or size. Consider:
+Scaling to reduce resolution (e.g., 800×600)
+Conversion to JPEG or PNG
+Compression if the raw screenshot is huge
+Ephemeral storage
+
+Decide if you store screenshots on disk, in memory, or stream them directly to the VLM. Possibly remove them after inference for privacy.
+Time stamping
+
+Tag each image with the time, plus the agent’s step or action ID. This helps keep logs consistent.
+4. Integrating the Vision Model
+Choice of VLM
+
+Could be an open-source model (e.g., BLIP, LLaVA, MiniGPT-4, etc.) or a commercial model with a simple API.
+Ensure the model can handle or interpret screenshots effectively, possibly with fine-tuning or a specialized prompt that suits UI data.
+Inference API
+
+If local: run the model inside your code, pass images to it.
+If remote (some provider or custom microservice): send the image via an HTTP/gRPC request.
+Prompt & Output Format
+
+Typically, you pass a short prompt:
+“Describe any sensitive or disallowed content in this screenshot. If you see PII or password fields, mention them. If you see private or adult content, mention it.”
+The model might respond with a short text that Bumpers can parse.
+Alternatively, you can request a JSON format (“Output a JSON with keys: dangerous = bool, reason = string.”) for easier programmatic reading.
+Latency Considerations
+
+Vision models can be slow (hundreds of ms to seconds). This can drastically slow agent steps.
+Potential optimization:
+Only run the model on “significant” changes (like a new page load or a critical action).
+Use lower-resolution screenshots or faster backbone models.
+5. Bumpers “Vision Validation” Flow
+Define a new ValidationPoint or re-use existing
+
+Possibly a new one called PRE_VISUAL or re-use PRE_ACTION: “Before agent acts, also check if the screen is safe.”
+Or add to PRE_OUTPUT if the final output is a screenshot-based scenario.
+Implement a new VisionValidator (like src/bumpers/validators/vision.py), which:
+
+Captures the screenshot or is passed the screenshot from the agent’s environment.
+Calls the VLM with a specialized prompt.
+Interprets the text response for keywords/policies.
+Returns ValidationResult(passed=..., message=..., fail_strategy=...).
+Register the VisionValidator:
+
+python
+Copy code
+from bumpers.validators.vision import VisionValidator
+from bumpers.core.engine import ValidationPoint
+
+validator = VisionValidator(
+    model_endpoint="http://localhost:5000/vlm_inference",
+    fail_strategy=FailStrategy.STOP
+)
+validation_engine.register_validator(validator, ValidationPoint.PRE_ACTION)
+Agent code:
+
+At PRE_ACTION time, Bumpers calls VisionValidator.validate(context) which triggers a screenshot, sends it to the model, interprets the result.
+If it detects “This page has private user data,” the validator can fail with a certain policy.
+6. Handling Potential Overhead & Security
+Frequent screenshots can be a big privacy/security concern.
+
+Potentially you’re capturing user info from the screen. You must store or handle these images responsibly (encrypt them at rest, discard them quickly).
+Possibly redact parts of the screenshot that are known to be sensitive before sending to the VLM.
+Performance trade-offs:
+
+Each step now adds VLM processing time. If your agent does many steps, consider skipping screenshots if the page hasn’t changed.
+Implement a “hash of screenshot” check— if the new screenshot is visually the same as the old one, no need to re-run the VLM?
+Fail Strategy:
+
+If “STOP” is set, you forcibly block the agent if the screen is suspicious (like a credit card form or an adult site).
+Or “RAISE_ERROR” so the user sees a warning but can continue.
+7. Example Step-by-Step Execution
+Agent tries to click a “Book Hotel” button for a family booking.
+
+Bumpers intercepts at PRE_ACTION.
+
+VisionValidator is invoked. It:
+
+Requests a screenshot from the agent’s browser.get_screenshot().
+Compresses it, sends to the VLM with prompt: “Describe any private data or fields.”
+VLM returns: “Page has a login form with password field and credit card info.”
+The validator checks if that’s disallowed. If user policy says “Never fill forms containing credit card data,” it fails with Stop or RaiseError.
+If pass, the user can proceed.
+The agent does the click.
+
+The agent gets the resulting page output. A second VLM check at PRE_OUTPUT can ensure the final text or image is not disallowed (like an adult image).
+
+If validated, the agent returns the final result to the user.
+
+8. Implementation Steps Summary
+Add a new VisionValidator file, e.g., src/bumpers/validators/vision.py:
+
+__init__ with references to your VLM endpoint or local model.
+validate(context): 1) capture screenshot 2) call VLM 3) parse result 4) decide pass/fail 5) return a ValidationResult.
+Extend BumpersLangChainCallback or custom callback to handle a new hooking mechanism that obtains screenshots from the environment.
+
+In on_agent_action or on_tool_end, call VisionValidator if the user configured it.
+Or in a custom agent approach, manually do:
+
+python
+Copy code
+screenshot = browser.get_screenshot()
+context["image_bytes"] = screenshot
+validation_engine.validate(ValidationPoint.PRE_ACTION, context)
+The VisionValidator picks image_bytes from context to run checks.
+Optimize (caching, hashing, partial screenshots) to reduce overhead.
+
+Fail strategy logic is the same as other validators: STOP, RAISE_ERROR, or LOG_ONLY.
+
+Security & Privacy: Decide if you store, mask, or discard images. Possibly you re-run an internal (self-hosted) model so screenshots don’t leave your environment.
