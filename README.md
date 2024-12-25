@@ -20,26 +20,9 @@ Add safety guardrails to your AI agents with just a few lines of code. Bumpers i
 
 ### Installation
 
-1. Clone the repository:
+1. Install:
 ```bash
-git clone https://github.com/pythonomar22/bumpers.git
-cd bumpers
-```
-
-2. Create and activate a virtual environment (recommended):
-```bash
-# On macOS/Linux
-python -m venv bumpersvenv
-source bumpersvenv/bin/activate
-
-# On Windows
-python -m venv bumpersvenv
-bumpersvenv\Scripts\activate
-```
-
-3. Install in editable mode:
-```bash
-pip install -e .
+pip install bumpers
 ```
 
 ### Basic Usage with LangChain
