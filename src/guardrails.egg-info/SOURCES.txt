@@ -1,6 +1,0 @@
-setup.py
-src/guardrails.egg-info/PKG-INFO
-src/guardrails.egg-info/SOURCES.txt
-src/guardrails.egg-info/dependency_links.txt
-src/guardrails.egg-info/requires.txt
-src/guardrails.egg-info/top_level.txt

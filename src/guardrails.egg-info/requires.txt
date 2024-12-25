@@ -1,9 +1,0 @@
-numpy
-pyyaml
-openai==0.28.1
-httpx
-
-[dev]
-pytest
-black
-flake8

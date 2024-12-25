@@ -1,9 +1,11 @@
 numpy
 pyyaml
-openai==0.28.1
 httpx
 langchain
 sentence-transformers
+cerebras-cloud-sdk
+torch
+openai>=1.0.0
 
 [dev]
 pytest
