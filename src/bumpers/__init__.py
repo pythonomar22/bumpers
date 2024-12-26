@@ -2,6 +2,6 @@
 
 from .types import ValidationPoint, ValidationResult, FailStrategy
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 __all__ = ["ValidationPoint", "ValidationResult", "FailStrategy"] 

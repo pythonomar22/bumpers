@@ -38,4 +38,5 @@ src/bumpers/validators/redundancy_looping.py
 src/bumpers/validators/resource.py
 src/bumpers/validators/semantic.py
 src/bumpers/validators/temporal_relevance.py
+src/bumpers/validators/vision.py
 tests/test_import.py
