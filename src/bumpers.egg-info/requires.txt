@@ -6,6 +6,8 @@ sentence-transformers
 cerebras-cloud-sdk
 torch
 openai>=1.0.0
+google-generativeai
+Pillow
 
 [dev]
 pytest
