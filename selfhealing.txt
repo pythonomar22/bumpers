@@ -1,0 +1,155 @@
+Below is a step-by-step technical guide describing how to add an “auto-correction” or “re-ask” feature to Bumpers for semantic drift or other validator failures, using the LangChain example. This approach effectively creates a “self-healing prompt” mechanism mid-chain, so the agent is automatically steered back on track rather than simply failing.
+
+1. Overview and Design Goals
+Why Auto-Correction?
+
+If a validator (e.g., a semantic drift validator) detects the agent’s output or chosen action is off-topic, you may want to re-prompt the LLM with clarifications or constraints so it re-aligns to user’s goal instead of just returning an error.
+Where It Fits in LangChain
+
+Typically, Bumpers validations run in BumpersLangChainCallback at ValidationPoint events (on_agent_action, on_tool_end, on_agent_finish).
+Currently, if a validator fails, we raise a RuntimeError or KeyboardInterrupt.
+Instead, for certain validators, we want to “auto-correct” the LLM prompt mid-chain and let the chain continue.
+High-Level Flow
+
+During validation: if semantic_drift_validator fails, we build a short “re-correction prompt” and replace or append it to the agent’s next input. Then we re-run the chain’s step logic, effectively “overriding” the agent’s last decision.
+2. Extend the Validation Flow to Handle “Auto-Correction”
+Augment the FailStrategy
+
+We can add a new enumerated value: FailStrategy.AUTO_CORRECT.
+This signals that instead of raising an error or stopping, we will do an automated fix (like a re-prompt).
+At the Callback
+
+In BumpersLangChainCallback.on_agent_action (or on_tool_end, etc.), if a validator returns passed=False and fail_strategy == AUTO_CORRECT, we do not raise an exception. Instead, we call a new method (e.g., _attempt_auto_correction).
+_attempt_auto_correction
+
+This new method will:
+Inspect the validator’s ValidationResult to see what’s wrong. For example, if the semantic drift validator says “the agent is not addressing the user’s goal,” the result might contain details about how the drift occurred.
+Construct a short re-correction prompt, e.g.:
+css
+Copy code
+"The system found that you are drifting from the user’s request to find flight deals. 
+ Please re-generate your next message, focusing on flight deals for LAX. 
+ Avoid any extraneous content. 
+ If you were about to do something else, correct it to stay on topic."
+Append or prepend this re-correction prompt to the chain’s next input message.
+Possibly reset the last “agent action” or “intermediate steps” so the chain tries again with the new instructions.
+Allow The Chain to Re-Run
+
+Typically, the chain will continue automatically after the callback returns. But we might need to forcibly re-invoke or modify the agent’s scratchpad in on_agent_action.
+The simplest approach is: we do not raise an exception, we just mutate the chain’s state so the next time the agent sees the re-correction message.
+3. Implementation Steps: Detailed Outline
+Step A: Add AUTO_CORRECT to FailStrategy
+In your bumpers/types.py or wherever FailStrategy is defined, add:
+makefile
+Copy code
+AUTO_CORRECT = "auto_correct"
+Everywhere else (like bumpers.validators.base or BumpersLangChainCallback), ensure you handle this new value.
+Step B: Enhance BumpersLangChainCallback to Handle AUTO_CORRECT
+Extend _handle_failure
+
+In BumpersLangChainCallback, find _handle_failure(self, error: ValidationError).
+Add a new branch:
+python
+Copy code
+elif strategy == FailStrategy.AUTO_CORRECT:
+    print(f"[BUMPERS] Validation failed with AUTO_CORRECT strategy: {error.result.message}")
+    self._attempt_auto_correction(error.result)
+Make sure we do not raise any error or interrupt afterward, so the chain can continue.
+Add _attempt_auto_correction method:
+
+Signature:
+
+python
+Copy code
+def _attempt_auto_correction(self, result: ValidationResult) -> None:
+    # 1. Derive a re-correction prompt from result
+    # 2. Insert it into the chain's context or scratchpad
+    # 3. Possibly alter the next user message
+    pass
+Implementation (high-level):
+
+Get details from result.message or result.context about how the agent drifted or what’s being blocked.
+Create a short “re-correction” instruction, e.g.:
+python
+Copy code
+re_correction_prompt = f"Your previous step was invalid because {result.message}. 
+Please correct your approach: 
+- Return to the user’s original request: {result.context.get('question')}. 
+- Avoid the behavior that caused validation to fail. 
+- If you used forbidden words or drifted, remove them."
+Modify the chain’s next input to incorporate re_correction_prompt.
+For example, if we have self.current_question, we can do:
+swift
+Copy code
+self.current_question += f"\n\n[System Correction]: {re_correction_prompt}"
+Or if we want to forcibly re-run the last step, we can manipulate the chain’s scratchpad.
+Step C: Modify The Agent’s Next Step or Prompt
+LangChain’s AgentExecutor typically cycles through AgentAction → Tool → AgentFinish. We have limited control in the callback, but we can mutate the internal “prompt” or “scratchpad”:
+
+If using MessagesPlaceholder:
+
+We might insert a new system message “Self Correction: …” into the chain’s messages so the LLM sees it.
+Update The “Intermediate Steps”:
+
+We can retrieve kwargs["intermediate_steps"] if provided, or the chain’s memory. We add a new step that says:
+json
+Copy code
+{
+  "tool": "SelfCorrection",
+  "tool_input": re_correction_prompt
+}
+The agent might parse that as if we told it to reconsider.
+In simpler setups, it might suffice to append to self.current_question.
+
+Step D: Let The Chain Continue
+We do not raise a RuntimeError or KeyboardInterrupt.
+The callback method returns normally, so the chain proceeds with the newly appended re-correction instructions.
+The agent hopefully re-generates an aligned response in its next step.
+4. Example Usage Flow
+Scenario: The user wants “Flight deals to LAX,” but the agent starts searching for “Restaurants in NYC.” The semantic_drift_validator fails with AUTO_CORRECT.
+
+At on_agent_action: Bumpers sees semantic_drift_validator returns:
+makefile
+Copy code
+passed=False, 
+message="Agent is talking about NYC restaurants, drifting from LAX flight deals", 
+fail_strategy=AUTO_CORRECT
+_handle_failure calls _attempt_auto_correction.
+_attempt_auto_correction sets:
+makefile
+Copy code
+re_correction_prompt = ("Your last step was invalid. Return to flight deals for LAX. "
+                        "Do not mention restaurants. Re-check user goal: LAX flights.")
+Bumpers appends that text to self.current_question.
+The callback method returns.
+The agent sees the updated user prompt next step, effectively guiding it to correct course.
+If it’s still drifting next time, the same cycle repeats, or eventually we can set a limit on how many times we auto-correct before forcibly stopping.
+5. Additional Considerations
+Limit Re-Correction Attempts
+
+Possibly track how many times we do AUTO_CORRECT in a single chain run to avoid infinite loops.
+If it fails too many times, fallback to STOP.
+Preserve Agent’s Own Reasoning
+
+We might want to store the original system messages. Don’t overwrite them entirely, just insert a system correction snippet to keep the agent’s prior context.
+UI/Logging
+
+Log the content of re-correction prompts so developers can see how often corrections happen and which validator triggered them.
+Custom Correction Logic
+
+Each validator might have a different approach to re-prompting. E.g., the ContentFilterValidator might say “You used forbidden words: [X]. Please remove them and try again.” The SemanticDriftValidator might say “Refocus on the user’s question about flight deals.”
+You can store instructions in ValidationResult.context["correction_instructions"] for each validator.
+6. Step-by-Step Summary
+Add AUTO_CORRECT to FailStrategy.
+In BumpersLangChainCallback, in _handle_failure, handle this new strategy:
+Do not raise an exception.
+Call _attempt_auto_correction(error.result).
+Implement _attempt_auto_correction:
+Parse ValidationResult for reasons it failed.
+Build a re-correction prompt string.
+Append that string to the agent’s next message input, e.g. self.current_question.
+Return from _handle_failure normally, letting chain proceed.
+Agent re-generates a response, hopefully aligned.
+(Optional) Track how many times you have auto-corrected in this chain. If it exceeds some threshold, fallback to STOP.
+7. Conclusion
+By following these steps, you create a self-healing or auto-correction mechanism in Bumpers. Instead of failing when a validator fails, certain “Auto-Correctable” validations re-inject instructions into the chain mid-run. This yields a more robust user experience where the agent tries to fix its mistakes and remain aligned with user goals—particularly beneficial for semantic drift or mild policy infractions that can be corrected by clarifying instructions to the LLM.

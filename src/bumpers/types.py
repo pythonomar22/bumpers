@@ -1,3 +1,5 @@
+# File: src/bumpers/types.py
+
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Any
@@ -13,6 +15,7 @@ class FailStrategy(Enum):
     STOP = "stop"         # Raise KeyboardInterrupt to halt the chain
     RAISE_ERROR = "raise" # Raise a RuntimeError but chain may continue if caught
     LOG_ONLY = "log"      # Log the error and continue, no interruption
+    AUTO_CORRECT = "auto_correct"  # Attempt a "self-healing" re-prompt
 
 @dataclass
 class ValidationResult:
@@ -21,4 +24,4 @@ class ValidationResult:
     validator_name: str
     validation_point: ValidationPoint
     context: Dict[str, Any]
-    fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR 
+    fail_strategy: FailStrategy = FailStrategy.RAISE_ERROR
