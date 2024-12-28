@@ -2,9 +2,10 @@ import copy
 import sys
 from typing import Any, Dict, List, Optional, Union
 
+# New OpenAI SDK import
+from openai import OpenAI
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import AgentAction, AgentFinish
-from langchain_community.chat_models import ChatOpenAI  # or any LLM from LangChain
 
 # Bumpers imports
 from ..core.engine import CoreValidationEngine, ValidationPoint, ValidationError
@@ -13,56 +14,28 @@ from .langchain_callback import BumpersLangChainCallback
 
 
 class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
-    """
-    A specialized callback that extends BumpersLangChainCallback, providing:
-      1. Automatic "rewind" to last safe checkpoint if fail_strategy=SELF_CORRECT
-      2. Optionally uses a correction LLM to dynamically craft the System Correction message.
-
-    How it works:
-      - We track conversation "checkpoints" (messages + optional environment state).
-      - If a validator triggers SELF_CORRECT, we:
-          a) Rewind to the last safe checkpoint,
-          b) Generate (or reuse) a "System Correction" message,
-          c) Prepend that correction to the conversation,
-          d) Raise `KeyboardInterrupt` to halt the chain.
-
-    The user (or your code) then:
-      - Catches the KeyboardInterrupt
-      - Re-runs the chain with the updated conversation (the new "System Correction" at the top).
-
-    Usage:
-      - Attach this callback to an AgentExecutor.
-      - Ensure your "run loop" handles KeyboardInterrupt to do the second run (or re-run automatically).
-    """
-
+    """A callback that handles self-correction when validation fails."""
+    
     def __init__(
         self,
         validation_engine: CoreValidationEngine,
+        openai_api_key: str,
         max_turns: int = 10,
-        system_correction: str = (
-            "Your previous attempt was disallowed. Please correct your approach "
-            "and remain aligned with the user's goal. Avoid repeating the invalid step."
-        ),
-        correction_llm: Optional["ChatOpenAI"] = None,
-        auto_re_run: bool = False,
+        max_self_correct: int = 1,
+        model_name: str = "gpt-3.5-turbo",
     ):
-        """
-        :param validation_engine: The Bumpers CoreValidationEngine
-        :param max_turns: Max turns before forcibly stopping
-        :param system_correction: A fallback static correction message
-        :param correction_llm: (Optional) An LLM to generate dynamic correction messages
-        :param auto_re_run: If True, attempts to re-run the chain automatically inside
-                            this callback (be cautious with infinite loops). If False,
-                            we raise KeyboardInterrupt so user code can handle re-running.
-        """
         super().__init__(validation_engine=validation_engine, max_turns=max_turns)
-        self.static_correction = system_correction
-        self.correction_llm = correction_llm
-        self.auto_re_run = auto_re_run
+        self.openai_api_key = openai_api_key
+        self.max_self_correct = max_self_correct
+        self.model_name = model_name
+        self._agent_executor_ref = None
+        self.self_correct_count = 0
+        self.run_number = 0
+        self.current_chain_stopped = False
 
-        # A list of conversation checkpoints
-        self.checkpoints: List[Dict[str, Any]] = []
-        self.last_safe_index = 0
+    def attach_agent_executor(self, agent_executor: Any):
+        """Store reference to agent executor for self-correction."""
+        self._agent_executor_ref = agent_executor
 
     def on_chain_start(
         self,
@@ -70,142 +43,137 @@ class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
         prompts: Union[List[str], Dict, str],
         **kwargs: Any
     ) -> None:
-        """Reset checkpoints and store the initial prompt(s)."""
+        """Print clear run header and track run number."""
+        self.run_number += 1
+        self.current_chain_stopped = False  # Reset flag
+        
+        # Extract user prompt
+        user_prompt = ""
+        if isinstance(prompts, dict) and "input" in prompts:
+            user_prompt = prompts["input"]
+        elif isinstance(prompts, list):
+            user_prompt = prompts[0] if prompts else ""
+        else:
+            user_prompt = str(prompts)
+
+        # Clear run header
+        if self.self_correct_count > 0:
+            print(f"\n[RUN #{self.run_number} - CORRECTED]")
+        else:
+            print(f"\n[RUN #{self.run_number}]")
+        print(f"Agent received prompt: {user_prompt}\n")
+
         super().on_chain_start(serialized, prompts, **kwargs)
 
-        self.checkpoints.clear()
-        self.last_safe_index = 0
-
-        # Convert prompts into a list of strings if needed
-        if isinstance(prompts, dict):
-            # e.g. {"input": "..."}
-            first_prompt = prompts.get("input", "")
-            all_prompts = [first_prompt]
-        elif isinstance(prompts, list):
-            all_prompts = prompts[:]
-        else:
-            all_prompts = [str(prompts)]
-
-        initial_checkpoint = {
-            "messages": all_prompts,
-            "environment": None,
-        }
-        self.checkpoints.append(initial_checkpoint)
-
     def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
-        """
-        Validate the chosen action with PRE_ACTION. If valid, checkpoint; if not, self-correct.
-        """
-        # Let the base class track current_question, increment self.turn, etc.
+        """Validate before action and handle failures."""
+        if self.current_chain_stopped:
+            # If chain was stopped due to validation, prevent further actions
+            raise KeyboardInterrupt("Chain stopped due to validation failure")
+            
         self.turn += 1
-
+        print(f"Agent: Attempting action '{action.tool}' with input '{action.tool_input}'")
+        
         validation_context = {
             "question": self.current_question,
             "action": action.tool,
             "action_input": action.tool_input,
             "turn": self.turn,
         }
-
+        
         try:
             self.validation_engine.validate(ValidationPoint.PRE_ACTION, validation_context)
         except ValidationError as e:
             self._handle_failure(e)
-            return
-
-        # If action is valid, checkpoint
-        prev_checkpoint = self.checkpoints[-1]
-        new_checkpoint = {
-            "messages": copy.deepcopy(prev_checkpoint["messages"]),
-            "environment": None,  # If you have a browser or environment state, store it here
-        }
-        self.checkpoints.append(new_checkpoint)
-        self.last_safe_index = len(self.checkpoints) - 1
-
-    def on_tool_end(self, output: str, tool: str, **kwargs: Any) -> None:
-        """Validate the tool's output with PRE_OUTPUT before returning to the agent."""
-        validation_context = {
-            "question": self.current_question,
-            "output": output,
-            "turn": self.turn,
-        }
-        try:
-            self.validation_engine.validate(ValidationPoint.PRE_OUTPUT, validation_context)
-        except ValidationError as e:
-            self._handle_failure(e)
-
-    def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> None:
-        """Validate the final output with PRE_OUTPUT."""
-        validation_context = {
-            "question": self.current_question,
-            "output": finish.return_values.get("output", ""),
-            "turn": self.turn + 1,
-        }
-        try:
-            self.validation_engine.validate(ValidationPoint.PRE_OUTPUT, validation_context)
-        except ValidationError as e:
-            self._handle_failure(e)
+            self.current_chain_stopped = True
+            raise KeyboardInterrupt("Chain stopped due to validation failure")
+            return None
 
     def _handle_failure(self, error: ValidationError):
-        """
-        If SELF_CORRECT => generate correction message & either auto-re-run or raise KeyboardInterrupt.
-        Otherwise, fallback to parent's logic for STOP, RAISE_ERROR, LOG_ONLY, etc.
-        """
-        if error.result.fail_strategy != FailStrategy.SELF_CORRECT:
-            # Let the parent handle STOP, RAISE_ERROR, LOG_ONLY
+        """Handle validation failure with clear output."""
+        strategy = error.result.fail_strategy
+        if strategy != FailStrategy.SELF_CORRECT:
             super()._handle_failure(error)
             return
 
-        # It's SELF_CORRECT
-        print(f"[BUMPERS] Validation triggered SELF_CORRECT => {error.result.message}")
+        print(f"\nValidation Failed: {error.result.message}")
+        
+        if self.self_correct_count >= self.max_self_correct:
+            print("\nMaximum correction attempts reached. Halting.")
+            raise KeyboardInterrupt("Max self-corrections reached")
 
-        # 1) Rewind to last safe checkpoint
-        if self.last_safe_index < len(self.checkpoints):
-            safe_checkpoint = self.checkpoints[self.last_safe_index]
-        else:
-            safe_checkpoint = self.checkpoints[0]
+        self.self_correct_count += 1
 
-        # 2) Generate or reuse the system correction text
-        correction_text = self._generate_correction_text(
-            fail_message=error.result.message,
+        # Generate correction
+        system_correction = self._generate_dynamic_correction(
             user_prompt=self.current_question,
+            fail_message=error.result.message
         )
 
-        # 3) Insert it at the top of the messages
-        corrected_messages = copy.deepcopy(safe_checkpoint["messages"])
-        corrected_messages.insert(0, correction_text)
+        if not self._agent_executor_ref:
+            raise KeyboardInterrupt("No agent reference available for correction")
 
-        if self.auto_re_run:
-            # Potentially do an in-callback re-run (advanced usage).
-            print("[BUMPERS] auto_re_run=True => Attempting immediate chain re-run with corrected_messages.")
-            # (Implementation omitted to avoid infinite loops. Typically user code handles re-run.)
-        else:
-            # Raise KeyboardInterrupt for the user’s code to do the second run
-            raise KeyboardInterrupt(
-                f"SELF_CORRECT triggered. Use these corrected messages:\n"
-                f"{corrected_messages}\n"
-            )
+        print("\nSystem Correction:")
+        print(f'"{system_correction}"\n')
 
-    def _generate_correction_text(self, fail_message: str, user_prompt: str) -> str:
-        """
-        If we have an LLM, we ask it to craft a dynamic system correction. Otherwise, we
-        fallback to a static correction message.
-        """
-        if self.correction_llm is None:
-            # Use the static user-supplied text
-            return (
-                f"System Correction: {self.static_correction}\n"
-                f"Reason: {fail_message}\n"
-            )
-        else:
-            # Dynamically generate the correction text via LLM
-            prompt_text = f"""
-You are a guardrail system. The user request was: '{user_prompt}'.
-A validator triggered because: '{fail_message}'.
-Generate a short "System Correction" message instructing the AI assistant 
-to avoid that invalid approach and remain aligned with the user's original goal.
-"""
-            # If your LLM is a ChatOpenAI, we can call .generate() or .call_as_llm():
-            response = self.correction_llm.generate([prompt_text])
-            correction_msg = response.generations[0][0].text.strip()
+        # Start new chain with correction
+        try:
+            new_input = f"{system_correction}\n\nOriginal request: {self.current_question}"
+            self.turn = 0
+            # We need to properly handle the chain completion here
+            result = self._agent_executor_ref.invoke({"input": new_input})
+            # After correction chain completes, exit cleanly
+            sys.exit(0)
+        except Exception as e:
+            print(f"Error during correction: {str(e)}")
+            raise KeyboardInterrupt("Correction failed")
 
-            return f"System Correction: {correction_msg}\nReason: {fail_message}\n"
+    def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> None:
+        """Print final output clearly."""
+        if not self.current_chain_stopped:
+            final_output = finish.return_values.get("output", "")
+            print(f"\nFinal Result [Run #{self.run_number}]: {final_output}\n")
+
+    def _generate_dynamic_correction(self, user_prompt: str, fail_message: str) -> str:
+        """Generate a correction that guides the agent to a safer approach."""
+        client = OpenAI(api_key=self.openai_api_key)
+
+        completion = client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {
+                    "role": "system", 
+                    "content": """You are a safety guidance system that helps AI agents correct their behavior.
+                    When an agent makes a potentially harmful decision, you provide guidance to:
+                    1. Explain why their previous action was unsafe
+                    2. Guide them toward a safer alternative
+                    3. Keep them focused on the user's original goal
+                    Be direct and concise in your correction."""
+                },
+                {
+                    "role": "user",
+                    "content": f"""The agent just tried an unsafe action.
+
+                    Original user request: {user_prompt}
+                    Safety violation: {fail_message}
+
+                    Generate a correction message for the agent that:
+                    1. Acknowledges what they tried to do
+                    2. Explains why it wasn't allowed
+                    3. Guides them to either:
+                       - Find a safer way to help the user
+                       - Explain why they can't help with this request
+                    """
+                },
+            ],
+        )
+
+        correction_text = completion.choices[0].message.content.strip()
+
+        # Format the correction as a clear instruction to the agent
+        return f"""Previous Action Blocked: {fail_message}
+
+Guidance for Agent:
+{correction_text}
+
+Remember: Stay focused on helping the user while maintaining safety."""
