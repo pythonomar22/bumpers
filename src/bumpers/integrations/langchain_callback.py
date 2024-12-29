@@ -26,8 +26,8 @@ class BumpersLangChainCallback(BaseCallbackHandler):
         super().__init__()
         self.validation_engine = validation_engine
         self.max_turns = max_turns
-        self.current_question: str = ""
         self.turn = 0
+        self.current_question = None  # This needs to be set in on_chain_start
 
     def on_chain_start(
         self,
@@ -44,10 +44,10 @@ class BumpersLangChainCallback(BaseCallbackHandler):
         # Attempt to parse the prompt
         if isinstance(prompts, dict) and "input" in prompts:
             user_prompt = prompts["input"]
-        elif isinstance(prompts, list) and prompts and isinstance(prompts[0], str):
-            user_prompt = prompts[0]
-        elif "input" in kwargs and isinstance(kwargs["input"], str):
-            user_prompt = kwargs["input"]
+        elif isinstance(prompts, list):
+            user_prompt = prompts[0] if prompts else ""
+        else:
+            user_prompt = str(prompts)
 
         self.current_question = user_prompt or ""
 

@@ -23,6 +23,7 @@ class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
         max_turns: int = 10,
         max_self_correct: int = 1,
         model_name: str = "gpt-3.5-turbo",
+        verbose: bool = False,
     ):
         super().__init__(validation_engine=validation_engine, max_turns=max_turns)
         self.openai_api_key = openai_api_key
@@ -32,6 +33,7 @@ class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
         self.self_correct_count = 0
         self.run_number = 0
         self.current_chain_stopped = False
+        self.verbose = verbose
 
     def attach_agent_executor(self, agent_executor: Any):
         """Store reference to agent executor for self-correction."""
@@ -45,9 +47,12 @@ class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
     ) -> None:
         """Print clear run header and track run number."""
         self.run_number += 1
-        self.current_chain_stopped = False  # Reset flag
+        self.current_chain_stopped = False
         
-        # Extract user prompt
+        # Always call parent to set current_question
+        super().on_chain_start(serialized, prompts, **kwargs)
+        
+        # Extract user prompt for display
         user_prompt = ""
         if isinstance(prompts, dict) and "input" in prompts:
             user_prompt = prompts["input"]
@@ -56,14 +61,15 @@ class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
         else:
             user_prompt = str(prompts)
 
-        # Clear run header
+        # Always show run number and prompt
         if self.self_correct_count > 0:
             print(f"\n[RUN #{self.run_number} - CORRECTED]")
         else:
             print(f"\n[RUN #{self.run_number}]")
-        print(f"Agent received prompt: {user_prompt}\n")
+        print(f"Prompt: {user_prompt}\n")
 
-        super().on_chain_start(serialized, prompts, **kwargs)
+        if self.verbose:
+            super().on_chain_start(serialized, prompts, **kwargs)
 
     def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
         """Validate before action and handle failures."""
@@ -72,7 +78,8 @@ class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
             raise KeyboardInterrupt("Chain stopped due to validation failure")
             
         self.turn += 1
-        print(f"Agent: Attempting action '{action.tool}' with input '{action.tool_input}'")
+        if self.verbose:
+            print(f"Agent: Attempting action '{action.tool}' with input '{action.tool_input}'")
         
         validation_context = {
             "question": self.current_question,
@@ -96,10 +103,12 @@ class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
             super()._handle_failure(error)
             return
 
-        print(f"\nValidation Failed: {error.result.message}")
+        if self.verbose:
+            print(f"\nValidation Failed: {error.result.message}")
         
         if self.self_correct_count >= self.max_self_correct:
-            print("\nMaximum correction attempts reached. Halting.")
+            if self.verbose:
+                print("\nMaximum correction attempts reached. Halting.")
             raise KeyboardInterrupt("Max self-corrections reached")
 
         self.self_correct_count += 1
@@ -113,6 +122,7 @@ class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
         if not self._agent_executor_ref:
             raise KeyboardInterrupt("No agent reference available for correction")
 
+        # Always show the correction
         print("\nSystem Correction:")
         print(f'"{system_correction}"\n')
 
@@ -120,18 +130,18 @@ class SelfCorrectingLangChainCallback(BumpersLangChainCallback):
         try:
             new_input = f"{system_correction}\n\nOriginal request: {self.current_question}"
             self.turn = 0
-            # We need to properly handle the chain completion here
             result = self._agent_executor_ref.invoke({"input": new_input})
-            # After correction chain completes, exit cleanly
             sys.exit(0)
         except Exception as e:
-            print(f"Error during correction: {str(e)}")
+            if self.verbose:
+                print(f"Error during correction: {str(e)}")
             raise KeyboardInterrupt("Correction failed")
 
     def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> None:
         """Print final output clearly."""
         if not self.current_chain_stopped:
             final_output = finish.return_values.get("output", "")
+            # Always show final output
             print(f"\nFinal Result [Run #{self.run_number}]: {final_output}\n")
 
     def _generate_dynamic_correction(self, user_prompt: str, fail_message: str) -> str:

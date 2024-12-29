@@ -17,6 +17,7 @@ src/bumpers/core/engine.py
 src/bumpers/integrations/__init__.py
 src/bumpers/integrations/langchain_callback.py
 src/bumpers/integrations/react.py
+src/bumpers/integrations/self_correcting_callback.py
 src/bumpers/logging/__init__.py
 src/bumpers/logging/base.py
 src/bumpers/logging/file_logger.py
@@ -36,7 +37,7 @@ src/bumpers/validators/pattern.py
 src/bumpers/validators/rate_limit.py
 src/bumpers/validators/redundancy_looping.py
 src/bumpers/validators/resource.py
-src/bumpers/validators/semantic.py
+src/bumpers/validators/semantic_drift.py
 src/bumpers/validators/temporal_relevance.py
 src/bumpers/validators/vision.py
 tests/test_import.py

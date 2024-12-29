@@ -8,7 +8,7 @@ from langchain.agents.format_scratchpad.openai_tools import format_to_openai_too
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 
 # Set OpenAI API key at the start
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "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"
 
 # Bumpers
 from bumpers.core.engine import CoreValidationEngine, ValidationPoint
@@ -65,7 +65,8 @@ def test_self_correction():
         openai_api_key=os.environ["OPENAI_API_KEY"],
         max_turns=10,
         max_self_correct=1,
-        model_name="gpt-3.5-turbo"
+        model_name="gpt-3.5-turbo",
+        verbose=False  # Set to False for minimal logging
     )
     callback.attach_agent_executor(agent_executor)
     agent_executor.callbacks = [callback]

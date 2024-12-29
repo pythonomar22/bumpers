@@ -1,4 +1,7 @@
 from .langchain_callback import BumpersLangChainCallback
-from .react import GuardedReActAgent
+from .self_correcting_callback import SelfCorrectingLangChainCallback
 
-__all__ = ["BumpersLangChainCallback", "GuardedReActAgent"] 
+__all__ = [
+    "BumpersLangChainCallback",
+    "SelfCorrectingLangChainCallback"
+] 
